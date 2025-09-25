@@ -20,6 +20,15 @@ const ORGANIZATIONS_QUERY = `
   }
 `;
 
+const UPDATE_PROMPT_MUTATION = `
+  mutation UpdateOrganizationPrompt($organizationId: ID!, $prompt: String!) {
+    updateOrganizationPrompt(organizationId: $organizationId, prompt: $prompt) {
+      id
+      prompt
+    }
+  }
+`;
+
 type ApiOrganization = Omit<Organization, 'securityObs'> & {
   securityObs: string | Record<string, unknown> | null;
 };
@@ -115,4 +124,50 @@ export async function fetchOrganizations(): Promise<Organization[]> {
   const organizations = data?.organizations ?? [];
 
   return organizations.map(transformOrganization);
+}
+
+interface UpdatePromptResponse {
+  data?: {
+    updateOrganizationPrompt?: {
+      id: string;
+      prompt: string;
+    };
+  };
+  errors?: Array<{ message?: string }>;
+}
+
+export async function updateOrganizationPrompt(
+  organizationId: string,
+  prompt: string
+): Promise<string> {
+  const response = await axios.post<UpdatePromptResponse>(
+    GRAPHQL_ENDPOINT,
+    {
+      query: UPDATE_PROMPT_MUTATION,
+      variables: {
+        organizationId,
+        prompt,
+      },
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  const { data, errors } = response.data;
+
+  if (errors && errors.length > 0) {
+    const message = errors.map((error) => error.message).filter(Boolean).join(' | ');
+    throw new Error(message || 'Erro ao atualizar prompt da organização.');
+  }
+
+  const updatedPrompt = data?.updateOrganizationPrompt?.prompt;
+
+  if (typeof updatedPrompt !== 'string') {
+    throw new Error('Resposta inválida ao atualizar prompt da organização.');
+  }
+
+  return updatedPrompt;
 }

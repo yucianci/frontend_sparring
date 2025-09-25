@@ -48,6 +48,7 @@ export interface AppContextType {
   isLoadingOrganizations: boolean;
   selectedOrganization: Organization | null;
   setSelectedOrganization: (org: Organization | null) => void;
+  saveOrganizationPrompt: (organizationId: string, prompt: string) => Promise<string>;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   analysisResult: AnalysisResult | null;

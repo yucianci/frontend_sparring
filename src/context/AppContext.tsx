@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, ReactNode } from 'react';
 import { AppContextType, Organization, AnalysisResult } from '../types';
-import { fetchOrganizations } from '../services/organizations';
+import { fetchOrganizations, updateOrganizationPrompt } from '../services/organizations';
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -65,6 +65,31 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setIsDarkMode(!isDarkMode);
   };
 
+  const saveOrganizationPrompt = async (
+    organizationId: string,
+    prompt: string
+  ) => {
+    const savedPrompt = await updateOrganizationPrompt(organizationId, prompt);
+
+    setOrganizations((current) =>
+      current.map((organization) =>
+        organization.id === organizationId
+          ? { ...organization, prompt: savedPrompt }
+          : organization
+      )
+    );
+
+    setSelectedOrganizationState((current) => {
+      if (current && current.id === organizationId) {
+        return { ...current, prompt: savedPrompt };
+      }
+
+      return current;
+    });
+
+    return savedPrompt;
+  };
+
   const value: AppContextType = {
     organizations,
     isLoadingOrganizations,
@@ -73,6 +98,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setSelectedOrganizationState(organization);
       setAnalysisResult(null);
     },
+    saveOrganizationPrompt,
     isDarkMode,
     toggleDarkMode,
     analysisResult,
