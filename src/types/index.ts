@@ -20,11 +20,26 @@ export interface Pattern {
   checklists: ChecklistItem[];
 }
 
+export interface FlightMetadata {
+  company?: string;
+  flightNumber?: string;
+  aircraft?: string;
+  pilot?: string;
+  copilot?: string;
+  flightDetails?: {
+    route?: string;
+    date?: string;
+    duration?: string;
+    weather?: string;
+  };
+}
+
 export interface AnalysisResult {
   transcriptId: string;
   organizationId: string;
   pilotId: string;
   patterns: Pattern[];
+  metadata?: FlightMetadata;
 }
 
 export interface AppContextType {

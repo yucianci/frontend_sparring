@@ -1,4 +1,4 @@
-import { AnalysisResult, ChecklistItem } from '../types';
+import { AnalysisResult, ChecklistItem, FlightMetadata } from '../types';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/build/pdf';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?url';
@@ -77,6 +77,77 @@ function normalizePatterns(rawPatterns: unknown): AnalysisResult['patterns'] {
       };
     })
     .filter((pattern) => Boolean(pattern.title));
+}
+
+function tryParseJson(text: string): unknown | null {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.debug('Falha ao fazer parse direto do texto como JSON:', error);
+    return null;
+  }
+}
+
+function extractJsonPayload(text: string): Record<string, unknown> | null {
+  const trimmed = text.trim();
+  const directParse = tryParseJson(trimmed);
+  if (directParse && typeof directParse === 'object' && !Array.isArray(directParse)) {
+    return directParse as Record<string, unknown>;
+  }
+
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const potentialJson = trimmed.slice(firstBrace, lastBrace + 1);
+    const parsed = tryParseJson(potentialJson);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  }
+
+  return null;
+}
+
+function extractFlightMetadata(extractedText: string): FlightMetadata {
+  const metadata: FlightMetadata = {};
+  const jsonPayload = extractJsonPayload(extractedText);
+
+  if (!jsonPayload) {
+    return metadata;
+  }
+
+  if (typeof jsonPayload.company === 'string') {
+    metadata.company = jsonPayload.company.trim();
+  }
+
+  if (typeof jsonPayload.flightNumber === 'string') {
+    metadata.flightNumber = jsonPayload.flightNumber.trim();
+  }
+
+  if (typeof jsonPayload.aircraft === 'string') {
+    metadata.aircraft = jsonPayload.aircraft.trim();
+  }
+
+  if (typeof jsonPayload.pilot === 'string') {
+    metadata.pilot = jsonPayload.pilot.trim();
+  }
+
+  if (typeof jsonPayload.copilot === 'string') {
+    metadata.copilot = jsonPayload.copilot.trim();
+  }
+
+  if (jsonPayload.flightDetails && typeof jsonPayload.flightDetails === 'object') {
+    const details = jsonPayload.flightDetails as Record<string, unknown>;
+    metadata.flightDetails = {
+      route: typeof details.route === 'string' ? details.route.trim() : undefined,
+      date: typeof details.date === 'string' ? details.date.trim() : undefined,
+      duration: typeof details.duration === 'string' ? details.duration.trim() : undefined,
+      weather: typeof details.weather === 'string' ? details.weather.trim() : undefined
+    };
+  }
+
+  return metadata;
 }
 
 async function generateGeminiAnalysis(
@@ -225,15 +296,35 @@ async function extractTextFromPdf(file: File): Promise<string> {
   return trimmedText;
 }
 
+interface AnalyzePdfOptions {
+  onBeforeAnalysis?: (data: {
+    metadata: FlightMetadata;
+    extractedText: string;
+  }) => boolean | Promise<boolean>;
+}
+
 export async function analyzePdfWithExtraction(
   file: File,
   prompt: string,
-  organizationId: string
+  organizationId: string,
+  options: AnalyzePdfOptions = {}
 ): Promise<AnalysisResult> {
   try {
     console.log('=== INICIANDO PROCESSAMENTO DO PDF ===');
 
     const extractedText = await extractTextFromPdf(file);
+    const metadata = extractFlightMetadata(extractedText);
+
+    if (options.onBeforeAnalysis) {
+      const shouldContinue = await options.onBeforeAnalysis({
+        metadata,
+        extractedText
+      });
+
+      if (!shouldContinue) {
+        throw new Error('ANALYSIS_CANCELLED');
+      }
+    }
 
     console.log('');
     console.log('=== PROMPT PARA ANÁLISE ===');
@@ -243,13 +334,8 @@ export async function analyzePdfWithExtraction(
     const transcriptId = `TRANSCRIPT_${Date.now()}`;
     let pilotId = `PILOT_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
 
-    try {
-      const jsonData = JSON.parse(extractedText.trim());
-      if (jsonData.pilot) {
-        pilotId = jsonData.pilot.replace(/\s+/g, '_').toUpperCase();
-      }
-    } catch (parseError) {
-      console.debug('Não foi possível identificar piloto a partir do PDF:', parseError);
+    if (metadata.pilot) {
+      pilotId = metadata.pilot.replace(/\s+/g, '_').toUpperCase();
     }
 
     let geminiResult: AnalysisResult | null = null;
@@ -267,6 +353,10 @@ export async function analyzePdfWithExtraction(
     }
 
     if (geminiResult) {
+      geminiResult.metadata = metadata;
+      if (metadata.pilot) {
+        geminiResult.pilotId = metadata.pilot;
+      }
       console.log('Análise gerada com sucesso pelo Gemini.');
       return geminiResult;
     }

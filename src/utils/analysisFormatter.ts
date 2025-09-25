@@ -1,11 +1,41 @@
 import { AnalysisResult } from '../types';
 
 export const formatAnalysisResult = (result: AnalysisResult) => {
+  const metadataLines: string[] = [];
+
+  if (result.metadata?.company) {
+    metadataLines.push(`Empresa: ${result.metadata.company}`);
+  }
+  if (result.metadata?.flightNumber) {
+    metadataLines.push(`Número do Voo: ${result.metadata.flightNumber}`);
+  }
+  if (result.metadata?.aircraft) {
+    metadataLines.push(`Aeronave: ${result.metadata.aircraft}`);
+  }
+  if (result.metadata?.copilot) {
+    metadataLines.push(`Copiloto: ${result.metadata.copilot}`);
+  }
+
+  const details = result.metadata?.flightDetails;
+  if (details?.route) {
+    metadataLines.push(`Rota: ${details.route}`);
+  }
+  if (details?.date) {
+    metadataLines.push(`Data: ${details.date}`);
+  }
+  if (details?.duration) {
+    metadataLines.push(`Duração: ${details.duration}`);
+  }
+  if (details?.weather) {
+    metadataLines.push(`Condições Climáticas: ${details.weather}`);
+  }
+
   const header = [
     'Resultado da Análise',
     `ID da Transcrição: ${result.transcriptId}`,
     `Organização: ${result.organizationId}`,
     `Piloto: ${result.pilotId}`,
+    ...metadataLines,
     ''.trim(),
   ];
 

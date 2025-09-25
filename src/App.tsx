@@ -37,12 +37,31 @@ const AppContent = () => {
     setIsAnalyzing(true);
     try {
       console.log('Iniciando extração de texto do PDF...');
-      const result = await analyzePdfWithExtraction(selectedFile, prompt, selectedOrganization.id);
+      const result = await analyzePdfWithExtraction(
+        selectedFile,
+        prompt,
+        selectedOrganization.id,
+        {
+          onBeforeAnalysis: ({ metadata }) => {
+            if (metadata.company && metadata.company !== selectedOrganization.name) {
+              return window.confirm(
+                `O PDF indica a organização "${metadata.company}", diferente da organização selecionada (${selectedOrganization.name}). Deseja continuar mesmo assim?`
+              );
+            }
+
+            return true;
+          }
+        }
+      );
       setAnalysisResult(result);
       console.log('Processamento concluído com sucesso!');
     } catch (error) {
-      console.error('Error analyzing transcript:', error);
-      alert(`Erro ao processar PDF: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      if (error instanceof Error && error.message === 'ANALYSIS_CANCELLED') {
+        console.info('Processamento cancelado pelo usuário devido a divergência de organização.');
+      } else {
+        console.error('Error analyzing transcript:', error);
+        alert(`Erro ao processar PDF: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      }
     } finally {
       setIsAnalyzing(false);
     }

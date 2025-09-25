@@ -27,6 +27,22 @@ const FeedbackDisplay = ({ result }: FeedbackDisplayProps) => {
     return { color: 'red', status: 'Crítico' };
   };
 
+  const { metadata } = result;
+
+  const primaryDetails = [
+    { label: 'Empresa', value: metadata?.company },
+    { label: 'Número do Voo', value: metadata?.flightNumber },
+    { label: 'Aeronave', value: metadata?.aircraft },
+    { label: 'Copiloto', value: metadata?.copilot }
+  ].filter((item) => Boolean(item.value));
+
+  const secondaryDetails = [
+    { label: 'Rota', value: metadata?.flightDetails?.route },
+    { label: 'Data', value: metadata?.flightDetails?.date },
+    { label: 'Duração', value: metadata?.flightDetails?.duration },
+    { label: 'Clima', value: metadata?.flightDetails?.weather }
+  ].filter((item) => Boolean(item.value));
+
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center space-x-3 mb-6">
@@ -36,15 +52,48 @@ const FeedbackDisplay = ({ result }: FeedbackDisplayProps) => {
             Resultado da Análise
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            ID da Transcrição: {result.transcriptId} | Piloto: {result.pilotId}
+            ID da Transcrição: {result.transcriptId}
+            {result.pilotId && ` | Piloto: ${result.pilotId}`}
           </p>
         </div>
       </div>
 
+      {(primaryDetails.length > 0 || secondaryDetails.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {primaryDetails.map((detail) => (
+            <div
+              key={detail.label}
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-4 py-3"
+            >
+              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {detail.label}
+              </p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {detail.value}
+              </p>
+            </div>
+          ))}
+
+          {secondaryDetails.map((detail) => (
+            <div
+              key={detail.label}
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40 px-4 py-3"
+            >
+              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {detail.label}
+              </p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {detail.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-6">
         {result.patterns.map((pattern, index) => {
           const patternStatus = getPatternStatus(pattern.checklists);
-          
+
           return (
             <div
               key={index}
