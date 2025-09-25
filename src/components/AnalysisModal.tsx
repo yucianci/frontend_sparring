@@ -28,13 +28,37 @@ const AnalysisModal = ({ isOpen, onClose, result }: AnalysisModalProps) => {
 
   const handleCopy = async () => {
     if (!formattedText) return;
+
+    const fallbackCopy = () => {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = formattedText;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.setAttribute('readonly', '');
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (fallbackError) {
+        console.error('Erro ao copiar texto da análise (fallback):', fallbackError);
+        alert('Não foi possível copiar o texto. Tente novamente.');
+      }
+    };
+
     try {
-      await navigator.clipboard.writeText(formattedText);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(formattedText);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } else {
+        fallbackCopy();
+      }
     } catch (error) {
       console.error('Erro ao copiar texto da análise:', error);
-      alert('Não foi possível copiar o texto. Tente novamente.');
+      fallbackCopy();
     }
   };
 
@@ -43,9 +67,23 @@ const AnalysisModal = ({ isOpen, onClose, result }: AnalysisModalProps) => {
     try {
       const doc = new jsPDF({ unit: 'pt', format: 'a4' });
       const margin = 40;
+      const pageHeight = doc.internal.pageSize.getHeight();
       const maxLineWidth = doc.internal.pageSize.getWidth() - margin * 2;
+      const lineHeight = 18;
       const lines = doc.splitTextToSize(formattedText, maxLineWidth);
-      doc.text(lines, margin, margin);
+
+      doc.setFontSize(11);
+
+      let cursorY = margin;
+      lines.forEach((line) => {
+        if (cursorY > pageHeight - margin) {
+          doc.addPage();
+          cursorY = margin;
+        }
+        doc.text(line, margin, cursorY);
+        cursorY += lineHeight;
+      });
+
       doc.save(`analise-${result.transcriptId}.pdf`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
