@@ -1,4 +1,7 @@
-# Frontend Sparring
+# Aviation AI - Sparring
+
+<img width="948" height="894" alt="image" src="https://github.com/user-attachments/assets/d9a92c09-9799-4f1d-b54b-fa795f5a00db" />
+
 
 Uma aplicação web construída com React e Vite que acelera a revisão de relatórios de voo. O projeto permite centralizar prompts personalizados por organização, extrair texto de arquivos PDF e gerar análises estruturadas com auxílio da API Gemini.
 
