@@ -3,7 +3,7 @@ import type { Organization, SecurityObservations } from '../types';
 
 const GRAPHQL_ENDPOINT =
   (import.meta.env?.VITE_GRAPHQL_URL as string | undefined) ??
-  'http://localhost:3000/graphql';
+  'http://54.164.151.205:3000/graphql';
 
 const ORGANIZATIONS_QUERY = `
   query Organizations {
