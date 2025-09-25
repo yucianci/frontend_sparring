@@ -8,6 +8,7 @@ import { useApp } from './hooks/useApp';
 import { analyzePdfWithExtraction } from './utils/pdfAnalysis';
 import { Loader2, Brain } from 'lucide-react';
 import AnalysisModal from './components/AnalysisModal';
+import OrganizationMismatchModal from './components/OrganizationMismatchModal';
 
 const AppContent = () => {
   const { selectedOrganization, analysisResult, setAnalysisResult } = useApp();
@@ -15,6 +16,11 @@ const AppContent = () => {
   const [prompt, setPrompt] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [organizationMismatch, setOrganizationMismatch] = useState<{
+    pdfCompany: string;
+    selectedOrganizationName: string;
+    resolve: (value: boolean) => void;
+  } | null>(null);
 
   useEffect(() => {
     if (selectedOrganization) {
@@ -44,9 +50,13 @@ const AppContent = () => {
         {
           onBeforeAnalysis: ({ metadata }) => {
             if (metadata.company && metadata.company !== selectedOrganization.name) {
-              return window.confirm(
-                `O PDF indica a organização "${metadata.company}", diferente da organização selecionada (${selectedOrganization.name}). Deseja continuar mesmo assim?`
-              );
+              return new Promise<boolean>((resolve) => {
+                setOrganizationMismatch({
+                  pdfCompany: metadata.company,
+                  selectedOrganizationName: selectedOrganization.name,
+                  resolve
+                });
+              });
             }
 
             return true;
@@ -69,6 +79,20 @@ const AppContent = () => {
 
   const hasRequiredData = Boolean(selectedFile && selectedOrganization && prompt.trim());
   const canAnalyze = hasRequiredData && !isAnalyzing;
+
+  const handleMismatchCancel = () => {
+    if (organizationMismatch) {
+      organizationMismatch.resolve(false);
+      setOrganizationMismatch(null);
+    }
+  };
+
+  const handleMismatchConfirm = () => {
+    if (organizationMismatch) {
+      organizationMismatch.resolve(true);
+      setOrganizationMismatch(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -133,6 +157,13 @@ const AppContent = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         result={analysisResult}
+      />
+      <OrganizationMismatchModal
+        isOpen={Boolean(organizationMismatch)}
+        pdfCompany={organizationMismatch?.pdfCompany ?? ''}
+        selectedOrganizationName={organizationMismatch?.selectedOrganizationName ?? ''}
+        onCancel={handleMismatchCancel}
+        onConfirm={handleMismatchConfirm}
       />
     </div>
   );
