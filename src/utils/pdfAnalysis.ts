@@ -78,6 +78,52 @@ function normalizePatterns(rawPatterns: unknown): AnalysisResult['patterns'] {
     .filter((pattern) => Boolean(pattern.title));
 }
 
+function ensureAllSecurityStandardsCovered(
+  patterns: AnalysisResult['patterns'],
+  organization: Organization
+): AnalysisResult['patterns'] {
+  const completedPatterns: AnalysisResult['patterns'] = [...patterns];
+  const seenTitles = new Set(
+    completedPatterns
+      .map((pattern) => pattern.title.trim().toLowerCase())
+      .filter((title) => title.length > 0)
+  );
+
+  const securityEntries = Object.entries(organization.securityObs ?? {});
+
+  securityEntries.forEach(([rawTitle, checklistItems]) => {
+    const title = rawTitle.trim();
+
+    if (!title) {
+      return;
+    }
+
+    const normalizedTitle = title.toLowerCase();
+
+    if (seenTitles.has(normalizedTitle)) {
+      return;
+    }
+
+    const normalizedChecklist = Array.isArray(checklistItems)
+      ? checklistItems
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0)
+          .map((item) => ({ [item]: false }))
+      : [];
+
+    completedPatterns.push({
+      title,
+      feedback:
+        'Nenhum feedback automático foi gerado para este padrão. Realize uma revisão manual para complementar a análise.',
+      checklists: normalizedChecklist,
+    });
+
+    seenTitles.add(normalizedTitle);
+  });
+
+  return completedPatterns;
+}
+
 function tryParseJson(text: string): unknown | null {
   try {
     return JSON.parse(text);
@@ -242,7 +288,10 @@ async function generateGeminiAnalysis(
         ? parsed.pilotId.trim()
         : pilotIdFallback;
 
-    const patterns = normalizePatterns(parsed.patterns);
+    const patterns = ensureAllSecurityStandardsCovered(
+      normalizePatterns(parsed.patterns),
+      organization
+    );
 
     if (!patterns.length) {
       return null;
