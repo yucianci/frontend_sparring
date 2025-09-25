@@ -5,7 +5,7 @@
 
 Uma aplicação web construída com React e Vite que acelera a revisão de relatórios de voo. O projeto permite centralizar prompts personalizados por organização, extrair texto de arquivos PDF e gerar análises estruturadas com auxílio da API Gemini.
 
-Deploy: http://frontend-sparring.s3-website-us-east-1.amazonaws.com/
+Aplicação em produção: http://frontend-sparring.s3-website-us-east-1.amazonaws.com/
 
 ## ✨ Principais funcionalidades
 
