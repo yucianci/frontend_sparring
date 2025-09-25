@@ -9,9 +9,16 @@ import { analyzePdfWithExtraction } from './utils/pdfAnalysis';
 import { Loader2, Brain } from 'lucide-react';
 import AnalysisModal from './components/AnalysisModal';
 import OrganizationMismatchModal from './components/OrganizationMismatchModal';
+import LoadingSkeleton from './components/LoadingSkeleton';
 
 const AppContent = () => {
-  const { selectedOrganization, analysisResult, setAnalysisResult } = useApp();
+  const {
+    selectedOrganization,
+    analysisResult,
+    setAnalysisResult,
+    saveOrganizationPrompt,
+    isLoadingOrganizations,
+  } = useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -21,6 +28,10 @@ const AppContent = () => {
     selectedOrganizationName: string;
     resolve: (value: boolean) => void;
   } | null>(null);
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
+  const [promptSaveStatus, setPromptSaveStatus] = useState<
+    'idle' | 'success' | 'error'
+  >('idle');
 
   useEffect(() => {
     if (selectedOrganization) {
@@ -29,6 +40,7 @@ const AppContent = () => {
       setPrompt('');
     }
     setAnalysisResult(null);
+    setPromptSaveStatus('idle');
   }, [selectedOrganization, setAnalysisResult]);
 
   useEffect(() => {
@@ -36,6 +48,43 @@ const AppContent = () => {
       setIsModalOpen(true);
     }
   }, [analysisResult]);
+
+  const handlePromptChange = (value: string) => {
+    setPrompt(value);
+    if (promptSaveStatus !== 'idle') {
+      setPromptSaveStatus('idle');
+    }
+  };
+
+  const handlePromptSave = async () => {
+    if (!selectedOrganization) {
+      return;
+    }
+
+    const isPromptDirty = prompt !== selectedOrganization.prompt;
+
+    if (!isPromptDirty) {
+      return;
+    }
+
+    setIsSavingPrompt(true);
+    setPromptSaveStatus('idle');
+
+    try {
+      const savedPrompt = await saveOrganizationPrompt(
+        selectedOrganization.id,
+        prompt
+      );
+      setPrompt(savedPrompt);
+      setPromptSaveStatus('success');
+    } catch (error) {
+      console.error('Erro ao salvar prompt:', error);
+      setPromptSaveStatus('error');
+      alert('Erro ao salvar prompt da organização.');
+    } finally {
+      setIsSavingPrompt(false);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!selectedFile || !selectedOrganization || !prompt.trim()) {
@@ -81,6 +130,9 @@ const AppContent = () => {
 
   const hasRequiredData = Boolean(selectedFile && selectedOrganization && prompt.trim());
   const canAnalyze = hasRequiredData && !isAnalyzing;
+  const isPromptDirty = Boolean(
+    selectedOrganization && prompt !== selectedOrganization.prompt
+  );
 
   const handleMismatchCancel = () => {
     if (organizationMismatch) {
@@ -100,20 +152,26 @@ const AppContent = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {selectedOrganization && (
+        {isLoadingOrganizations ? (
+          <LoadingSkeleton />
+        ) : selectedOrganization ? (
           <>
             <OrganizationCards />
-            
+
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-              <FileUpload 
-                onFileSelect={setSelectedFile} 
-                selectedFile={selectedFile} 
+              <FileUpload
+                onFileSelect={setSelectedFile}
+                selectedFile={selectedFile}
               />
-              
+
               <div className="xl:col-span-1">
-                <PromptEditor 
-                  prompt={prompt} 
-                  onPromptChange={setPrompt} 
+                <PromptEditor
+                  prompt={prompt}
+                  onPromptChange={handlePromptChange}
+                  onSave={handlePromptSave}
+                  isDirty={isPromptDirty}
+                  isSaving={isSavingPrompt}
+                  status={promptSaveStatus}
                 />
               </div>
             </div>
@@ -152,6 +210,10 @@ const AppContent = () => {
               )}
             </div>
           </>
+        ) : (
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-600 dark:text-gray-300">
+            Nenhuma organização cadastrada até o momento.
+          </div>
         )}
       </main>
 
