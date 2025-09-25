@@ -1,16 +1,14 @@
-import React from 'react';
 import { Plane, Moon, Sun, Building2 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { organizations } from '../data/organizations';
 
-const Header: React.FC = () => {
+const Header = () => {
   const { selectedOrganization, setSelectedOrganization, isDarkMode, toggleDarkMode } = useApp();
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 sm:h-16 gap-4 sm:gap-0">
-          {/* Logo */}
           <div className="flex items-center space-x-3">
             <div className="bg-blue-600 p-2 rounded-lg">
               <Plane className="h-6 w-6 text-white" />
@@ -25,7 +23,6 @@ const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* Organization Selector */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-6 w-full sm:w-auto">
             <div className="flex items-center space-x-3 w-full sm:w-auto">
               <div className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -49,7 +46,6 @@ const Header: React.FC = () => {
               </select>
             </div>
 
-            {/* Theme Toggle */}
             <button
               onClick={toggleDarkMode}
               className="self-end sm:self-auto p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105"

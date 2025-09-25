@@ -1,4 +1,3 @@
-import React from 'react';
 import { Edit3 } from 'lucide-react';
 
 interface PromptEditorProps {
@@ -6,7 +5,7 @@ interface PromptEditorProps {
   onPromptChange: (prompt: string) => void;
 }
 
-const PromptEditor: React.FC<PromptEditorProps> = ({ prompt, onPromptChange }) => {
+const PromptEditor = ({ prompt, onPromptChange }: PromptEditorProps) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
       <div className="flex items-center space-x-2 mb-4">

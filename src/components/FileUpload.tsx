@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { ChangeEvent, DragEvent, useState } from 'react';
 import { Upload, FileText, X } from 'lucide-react';
 
 interface FileUploadProps {
@@ -6,10 +6,10 @@ interface FileUploadProps {
   selectedFile: File | null;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, selectedFile }) => {
+const FileUpload = ({ onFileSelect, selectedFile }: FileUploadProps) => {
   const [dragActive, setDragActive] = useState(false);
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') {
@@ -19,7 +19,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, selectedFile }) =
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -30,7 +30,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, selectedFile }) =
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files[0]) {
       onFileSelect(files[0]);
