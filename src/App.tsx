@@ -4,16 +4,17 @@ import Header from './components/Header';
 import OrganizationCards from './components/OrganizationCards';
 import FileUpload from './components/FileUpload';
 import PromptEditor from './components/PromptEditor';
-import FeedbackDisplay from './components/FeedbackDisplay';
 import { useApp } from './hooks/useApp';
 import { analyzePdfWithExtraction } from './utils/pdfAnalysis';
 import { Loader2, Brain } from 'lucide-react';
+import AnalysisModal from './components/AnalysisModal';
 
 const AppContent = () => {
   const { selectedOrganization, analysisResult, setAnalysisResult } = useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (selectedOrganization) {
@@ -21,6 +22,12 @@ const AppContent = () => {
       setAnalysisResult(null);
     }
   }, [selectedOrganization, setAnalysisResult]);
+
+  useEffect(() => {
+    if (analysisResult) {
+      setIsModalOpen(true);
+    }
+  }, [analysisResult]);
 
   const handleAnalyze = async () => {
     if (!selectedFile || !selectedOrganization || !prompt.trim()) {
@@ -88,12 +95,26 @@ const AppContent = () => {
                   </>
                 )}
               </button>
-            </div>
 
-            {analysisResult && <FeedbackDisplay result={analysisResult} />}
+              {analysisResult && (
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="w-full sm:w-auto px-8 py-3 rounded-lg font-medium flex items-center justify-center space-x-3 bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition"
+                >
+                  <Brain className="h-5 w-5" />
+                  <span>Ver Resultado</span>
+                </button>
+              )}
+            </div>
           </>
         )}
       </main>
+
+      <AnalysisModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        result={analysisResult}
+      />
     </div>
   );
 };
