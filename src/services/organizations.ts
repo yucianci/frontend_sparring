@@ -21,8 +21,10 @@ const ORGANIZATIONS_QUERY = `
 `;
 
 const UPDATE_PROMPT_MUTATION = `
-  mutation UpdateOrganizationPrompt($organizationId: ID!, $prompt: String!) {
-    updateOrganizationPrompt(organizationId: $organizationId, prompt: $prompt) {
+  mutation UpdateOrganizationPrompt($organizationId: String!, $prompt: String!) {
+    updateOrganization(
+      updateOrganizationInput: { id: $organizationId, prompt: $prompt }
+    ) {
       id
       prompt
     }
@@ -128,7 +130,7 @@ export async function fetchOrganizations(): Promise<Organization[]> {
 
 interface UpdatePromptResponse {
   data?: {
-    updateOrganizationPrompt?: {
+    updateOrganization?: {
       id: string;
       prompt: string;
     };
@@ -163,7 +165,7 @@ export async function updateOrganizationPrompt(
     throw new Error(message || 'Erro ao atualizar prompt da organização.');
   }
 
-  const updatedPrompt = data?.updateOrganizationPrompt?.prompt;
+  const updatedPrompt = data?.updateOrganization?.prompt;
 
   if (typeof updatedPrompt !== 'string') {
     throw new Error('Resposta inválida ao atualizar prompt da organização.');
