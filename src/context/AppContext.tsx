@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, ReactNode } from 'react';
 import { AppContextType, Organization, AnalysisResult } from '../types';
-import { organizations } from '../data/organizations';
+import { fetchOrganizations } from '../services/organizations';
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -9,14 +9,48 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(
-    organizations[0]
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [selectedOrganization, setSelectedOrganizationState] = useState<Organization | null>(
+    null
   );
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('aviation-ai-dark-mode');
     return saved ? JSON.parse(saved) : false;
   });
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState<boolean>(true);
+
+  useEffect(() => {
+    const loadOrganizations = async () => {
+      try {
+        setIsLoadingOrganizations(true);
+        const fetched = await fetchOrganizations();
+        setOrganizations(fetched);
+        setSelectedOrganizationState((current) => {
+          if (!fetched.length) {
+            return null;
+          }
+
+          if (current) {
+            const matched = fetched.find((org) => org.id === current.id);
+            if (matched) {
+              return matched;
+            }
+          }
+
+          return fetched[0];
+        });
+      } catch (error) {
+        console.error('Erro ao carregar organizações:', error);
+        setOrganizations([]);
+        setSelectedOrganizationState(null);
+      } finally {
+        setIsLoadingOrganizations(false);
+      }
+    };
+
+    loadOrganizations();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('aviation-ai-dark-mode', JSON.stringify(isDarkMode));
@@ -32,8 +66,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const value: AppContextType = {
+    organizations,
+    isLoadingOrganizations,
     selectedOrganization,
-    setSelectedOrganization,
+    setSelectedOrganization: (organization: Organization | null) => {
+      setSelectedOrganizationState(organization);
+      setAnalysisResult(null);
+    },
     isDarkMode,
     toggleDarkMode,
     analysisResult,

@@ -1,12 +1,13 @@
+export type SecurityObservations = Record<string, string[]>;
+
 export interface Organization {
   id: string;
   name: string;
   pilots: number;
-  averageFlightHours: number;
-  fleet: number;
-  safetyStandards: string[];
-  checklists: Record<string, string[]>;
-  observations: string;
+  flightHours: number;
+  airships: number;
+  securityObs: SecurityObservations;
+  generalObs: string;
   prompt: string;
 }
 
@@ -43,8 +44,10 @@ export interface AnalysisResult {
 }
 
 export interface AppContextType {
+  organizations: Organization[];
+  isLoadingOrganizations: boolean;
   selectedOrganization: Organization | null;
-  setSelectedOrganization: (org: Organization) => void;
+  setSelectedOrganization: (org: Organization | null) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   analysisResult: AnalysisResult | null;

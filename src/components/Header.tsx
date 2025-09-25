@@ -1,9 +1,15 @@
 import { Plane, Moon, Sun, Building2 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
-import { organizations } from '../data/organizations';
 
 const Header = () => {
-  const { selectedOrganization, setSelectedOrganization, isDarkMode, toggleDarkMode } = useApp();
+  const {
+    organizations,
+    selectedOrganization,
+    setSelectedOrganization,
+    isDarkMode,
+    toggleDarkMode,
+    isLoadingOrganizations,
+  } = useApp();
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
@@ -33,16 +39,23 @@ const Header = () => {
                 id="organization-select"
                 value={selectedOrganization?.id || ''}
                 onChange={(e) => {
-                  const org = organizations.find(o => o.id === e.target.value);
-                  if (org) setSelectedOrganization(org);
+                  const org = organizations.find((o) => o.id === e.target.value) || null;
+                  setSelectedOrganization(org);
                 }}
-                className="block w-full sm:w-56 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500"
+                disabled={isLoadingOrganizations || organizations.length === 0}
+                className="block w-full sm:w-56 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {organizations.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
-                  </option>
-                ))}
+                {isLoadingOrganizations ? (
+                  <option value="">Carregando organizações...</option>
+                ) : organizations.length > 0 ? (
+                  organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Nenhuma organização disponível</option>
+                )}
               </select>
             </div>
 
