@@ -44,7 +44,3 @@ npm run dev
 ```
 
 O Vite exibirá no terminal a URL local (por padrão, `http://localhost:5173`).
-
-## 📄 Licença
-
-Defina aqui a licença do projeto (por exemplo, MIT) antes de publicar no GitHub.
