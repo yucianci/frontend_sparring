@@ -1,9 +1,8 @@
-import { AnalysisResult, ChecklistItem, FlightMetadata } from '../types';
+import { AnalysisResult, ChecklistItem, FlightMetadata, Organization } from '../types';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/build/pdf';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { organizations } from '../data/organizations';
 
 GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -153,7 +152,7 @@ function extractFlightMetadata(extractedText: string): FlightMetadata {
 async function generateGeminiAnalysis(
   extractedText: string,
   prompt: string,
-  organizationId: string,
+  organization: Organization,
   transcriptId: string,
   pilotIdFallback: string
 ): Promise<AnalysisResult | null> {
@@ -161,13 +160,20 @@ async function generateGeminiAnalysis(
     return null;
   }
 
-  const organization = organizations.find((org) => org.id === organizationId);
+  const organizationId = organization.id;
+  const checklistEntries = Object.entries(organization.securityObs ?? {});
 
-  const checklistInstructions = organization
-    ? Object.entries(organization.checklists)
+  const checklistInstructions = checklistEntries.length
+    ? checklistEntries
         .map(([patternName, checklistItems]) => {
-          const itemsList = checklistItems.map((item) => `- ${item}`).join('\n');
-          return `Padrão: ${patternName}\n${itemsList}`;
+          const sanitizedPattern = patternName.trim();
+          const itemsList = checklistItems
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0)
+            .map((item) => `- ${item}`)
+            .join('\n');
+
+          return [`Padrão: ${sanitizedPattern}`, itemsList].filter(Boolean).join('\n');
         })
         .join('\n\n')
     : '';
@@ -306,7 +312,7 @@ interface AnalyzePdfOptions {
 export async function analyzePdfWithExtraction(
   file: File,
   prompt: string,
-  organizationId: string,
+  organization: Organization,
   options: AnalyzePdfOptions = {}
 ): Promise<AnalysisResult> {
   try {
@@ -344,7 +350,7 @@ export async function analyzePdfWithExtraction(
       geminiResult = await generateGeminiAnalysis(
         extractedText,
         prompt,
-        organizationId,
+        organization,
         transcriptId,
         pilotId
       );

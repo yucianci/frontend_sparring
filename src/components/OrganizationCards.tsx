@@ -6,6 +6,12 @@ const OrganizationCards = () => {
 
   if (!selectedOrganization) return null;
 
+  const securityStandards = Object.keys(selectedOrganization.securityObs || {});
+  const totalSecurityItems = securityStandards.reduce((count, standard) => {
+    const items = selectedOrganization.securityObs[standard] || [];
+    return count + items.length;
+  }, 0);
+
   const cards = [
     {
       title: 'Pilotos',
@@ -14,20 +20,20 @@ const OrganizationCards = () => {
       color: 'blue',
     },
     {
-      title: 'Horas de Voo (Média)',
-      value: `${selectedOrganization.averageFlightHours.toLocaleString()}h`,
+      title: 'Horas de Voo (Totais)',
+      value: `${selectedOrganization.flightHours.toLocaleString()}h`,
       icon: Clock,
       color: 'green',
     },
     {
-      title: 'Frota',
-      value: `${selectedOrganization.fleet} aeronaves`,
+      title: 'Dirigíveis / Aeronaves',
+      value: `${selectedOrganization.airships} unidades`,
       icon: Plane,
       color: 'purple',
     },
     {
       title: 'Padrões de Segurança',
-      value: selectedOrganization.safetyStandards.length.toString(),
+      value: securityStandards.length.toString(),
       icon: Shield,
       color: 'orange',
     },
@@ -76,17 +82,38 @@ const OrganizationCards = () => {
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
             Padrões de Segurança
           </h3>
-          <ul className="space-y-2">
-            {selectedOrganization.safetyStandards.map((standard, index) => (
-              <li
-                key={index}
-                className="flex items-center space-x-2 text-gray-700 dark:text-gray-300"
-              >
-                <Shield className="h-4 w-4 text-blue-500" />
-                <span>{standard}</span>
-              </li>
-            ))}
-          </ul>
+          {securityStandards.length > 0 ? (
+            <ul className="space-y-3">
+              {securityStandards.map((standard) => {
+                const checklistItems = selectedOrganization.securityObs[standard] || [];
+
+                return (
+                  <li key={standard} className="text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium">{standard}</span>
+                    </div>
+                    {checklistItems.length > 0 && (
+                      <ul className="ml-6 list-disc space-y-1 text-sm opacity-90">
+                        {checklistItems.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
+              Nenhum padrão de segurança cadastrado.
+            </p>
+          )}
+          {totalSecurityItems > 0 && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+              Total de itens monitorados: {totalSecurityItems}
+            </p>
+          )}
         </div>
 
         <div>
@@ -94,7 +121,7 @@ const OrganizationCards = () => {
             Observações
           </h3>
           <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-            {selectedOrganization.observations}
+            {selectedOrganization.generalObs}
           </p>
         </div>
       </div>

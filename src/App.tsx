@@ -25,8 +25,10 @@ const AppContent = () => {
   useEffect(() => {
     if (selectedOrganization) {
       setPrompt(selectedOrganization.prompt);
-      setAnalysisResult(null);
+    } else {
+      setPrompt('');
     }
+    setAnalysisResult(null);
   }, [selectedOrganization, setAnalysisResult]);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ const AppContent = () => {
       const result = await analyzePdfWithExtraction(
         selectedFile,
         prompt,
-        selectedOrganization.id,
+        selectedOrganization,
         {
           onBeforeAnalysis: ({ metadata }) => {
             if (metadata.company && metadata.company !== selectedOrganization.name) {
