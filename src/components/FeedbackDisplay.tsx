@@ -1,12 +1,11 @@
-import React from 'react';
 import { CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
-import { AnalysisResult } from '../types';
+import { AnalysisResult, ChecklistItem } from '../types';
 
 interface FeedbackDisplayProps {
   result: AnalysisResult;
 }
 
-const FeedbackDisplay: React.FC<FeedbackDisplayProps> = ({ result }) => {
+const FeedbackDisplay = ({ result }: FeedbackDisplayProps) => {
   const getStatusIcon = (status: boolean) => {
     return status ? (
       <CheckCircle className="h-5 w-5 text-green-500" />
@@ -15,7 +14,7 @@ const FeedbackDisplay: React.FC<FeedbackDisplayProps> = ({ result }) => {
     );
   };
 
-  const getPatternStatus = (checklists: any[]) => {
+  const getPatternStatus = (checklists: ChecklistItem[]) => {
     const totalItems = checklists.reduce((acc, checklist) => acc + Object.keys(checklist).length, 0);
     const passedItems = checklists.reduce((acc, checklist) => {
       return acc + Object.values(checklist).filter(Boolean).length;

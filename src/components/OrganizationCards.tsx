@@ -1,8 +1,7 @@
-import React from 'react';
 import { Users, Clock, Plane, Shield } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 
-const OrganizationCards: React.FC = () => {
+const OrganizationCards = () => {
   const { selectedOrganization } = useApp();
 
   if (!selectedOrganization) return null;

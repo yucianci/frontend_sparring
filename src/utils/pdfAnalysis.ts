@@ -45,7 +45,7 @@ function normalizeChecklistItems(rawChecklists: unknown): ChecklistItem[] {
 
   if (Array.isArray(rawChecklists)) {
     return rawChecklists
-      .map((item) => toChecklistItem(item))
+      .map(toChecklistItem)
       .filter((item): item is ChecklistItem => Boolean(item));
   }
 
@@ -101,11 +101,43 @@ async function generateGeminiAnalysis(
         .join('\n\n')
     : '';
 
-  const systemPrompt = `Você é um analista especializado em aviação e CRM. Utilize o prompt fornecido pela organização e o transcript extraído para produzir insights estruturados.\n\nResponda SOMENTE com um JSON válido (sem comentários ou textos adicionais) seguindo exatamente o formato abaixo:\n{\n  "transcriptId": "${transcriptId}",\n  "organizationId": "${organizationId}",\n  "pilotId": "<ID do piloto (ex: PILOT_123)>",\n  "patterns": [\n    {\n      "title": "<Título do padrão identificado>",\n      "feedback": "<Feedback detalhado sobre o padrão>",\n      "checklists": [\n        { "<Nome do item de checklist>": true | false }\n      ]\n    }\n  ]\n}\n\nDiretrizes adicionais:\n- Reutilize os nomes de padrões e itens de checklist fornecidos.\n- Sempre forneça pelo menos dois padrões relevantes.\n- Se algum item não se aplicar, use false.\n- Mantenha o feedback em português.`;
+  const systemPrompt = [
+    'Você é um analista especializado em aviação e CRM. Utilize o prompt fornecido pela organização e o transcript extraído para produzir insights estruturados.',
+    'Responda SOMENTE com um JSON válido (sem comentários ou textos adicionais) seguindo exatamente o formato abaixo:',
+    '{',
+    `  "transcriptId": "${transcriptId}",`,
+    `  "organizationId": "${organizationId}",`,
+    '  "pilotId": "<ID do piloto (ex: PILOT_123)>",',
+    '  "patterns": [',
+    '    {',
+    '      "title": "<Título do padrão identificado>",',
+    '      "feedback": "<Feedback detalhado sobre o padrão>",',
+    '      "checklists": [',
+    '        { "<Nome do item de checklist>": true | false }',
+    '      ]',
+    '    }',
+    '  ]',
+    '}',
+    'Diretrizes adicionais:',
+    '- Reutilize os nomes de padrões e itens de checklist fornecidos.',
+    '- Sempre forneça pelo menos dois padrões relevantes.',
+    '- Se algum item não se aplicar, use false.',
+    '- Mantenha o feedback em português.'
+  ].join('\n');
 
-  const fullPrompt = `${systemPrompt}\n\n--- Prompt da Organização ---\n${prompt}\n\n${
-    checklistInstructions ? `--- Checklists da Organização ---\n${checklistInstructions}\n\n` : ''
-  }--- Transcript Extraído ---\n${extractedText}`;
+  const promptSections = [
+    systemPrompt,
+    '--- Prompt da Organização ---',
+    prompt
+  ];
+
+  if (checklistInstructions) {
+    promptSections.push('--- Checklists da Organização ---', checklistInstructions);
+  }
+
+  promptSections.push('--- Transcript Extraído ---', extractedText);
+
+  const fullPrompt = promptSections.join('\n\n');
 
   console.log('Enviando requisição para o Gemini...');
 
@@ -151,7 +183,6 @@ async function generateGeminiAnalysis(
   }
 }
 
-// Função para extrair texto do PDF usando pdfjs-dist (compatível com o browser)
 async function extractTextFromPdf(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = getDocument({ data: arrayBuffer });
@@ -194,7 +225,6 @@ async function extractTextFromPdf(file: File): Promise<string> {
   return trimmedText;
 }
 
-// Função para processar PDF e retornar resultado baseado nos dados extraídos
 export async function analyzePdfWithExtraction(
   file: File,
   prompt: string,
@@ -203,7 +233,6 @@ export async function analyzePdfWithExtraction(
   try {
     console.log('=== INICIANDO PROCESSAMENTO DO PDF ===');
 
-    // 1. Extrair texto do PDF e mostrar no console
     const extractedText = await extractTextFromPdf(file);
 
     console.log('');
@@ -220,7 +249,7 @@ export async function analyzePdfWithExtraction(
         pilotId = jsonData.pilot.replace(/\s+/g, '_').toUpperCase();
       }
     } catch (parseError) {
-      // Usar ID aleatório se não conseguir fazer parse
+      console.debug('Não foi possível identificar piloto a partir do PDF:', parseError);
     }
 
     let geminiResult: AnalysisResult | null = null;

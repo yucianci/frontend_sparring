@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppProvider } from './context/AppContext';
 import Header from './components/Header';
 import OrganizationCards from './components/OrganizationCards';
 import FileUpload from './components/FileUpload';
 import PromptEditor from './components/PromptEditor';
 import FeedbackDisplay from './components/FeedbackDisplay';
-import { useApp } from './context/AppContext';
+import { useApp } from './hooks/useApp';
 import { analyzePdfWithExtraction } from './utils/pdfAnalysis';
 import { Loader2, Brain } from 'lucide-react';
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { selectedOrganization, analysisResult, setAnalysisResult } = useApp();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedOrganization) {
       setPrompt(selectedOrganization.prompt);
-      setAnalysisResult(null); // Clear previous results when organization changes
+      setAnalysisResult(null);
     }
   }, [selectedOrganization, setAnalysisResult]);
 
@@ -35,14 +35,14 @@ const AppContent: React.FC = () => {
       console.log('Processamento concluído com sucesso!');
     } catch (error) {
       console.error('Error analyzing transcript:', error);
-      // Mostrar erro para o usuário
       alert(`Erro ao processar PDF: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const canAnalyze = selectedFile && selectedOrganization && prompt.trim() && !isAnalyzing;
+  const hasRequiredData = Boolean(selectedFile && selectedOrganization && prompt.trim());
+  const canAnalyze = hasRequiredData && !isAnalyzing;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
