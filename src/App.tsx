@@ -1,0 +1,109 @@
+import React, { useState } from 'react';
+import { AppProvider } from './context/AppContext';
+import Header from './components/Header';
+import OrganizationCards from './components/OrganizationCards';
+import FileUpload from './components/FileUpload';
+import PromptEditor from './components/PromptEditor';
+import FeedbackDisplay from './components/FeedbackDisplay';
+import { useApp } from './context/AppContext';
+import { analyzePdfWithExtraction } from './utils/pdfAnalysis';
+import { Loader2, Brain } from 'lucide-react';
+
+const AppContent: React.FC = () => {
+  const { selectedOrganization, analysisResult, setAnalysisResult } = useApp();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  React.useEffect(() => {
+    if (selectedOrganization) {
+      setPrompt(selectedOrganization.prompt);
+      setAnalysisResult(null); // Clear previous results when organization changes
+    }
+  }, [selectedOrganization, setAnalysisResult]);
+
+  const handleAnalyze = async () => {
+    if (!selectedFile || !selectedOrganization || !prompt.trim()) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      console.log('Iniciando extração de texto do PDF...');
+      const result = await analyzePdfWithExtraction(selectedFile, prompt, selectedOrganization.id);
+      setAnalysisResult(result);
+      console.log('Processamento concluído com sucesso!');
+    } catch (error) {
+      console.error('Error analyzing transcript:', error);
+      // Mostrar erro para o usuário
+      alert(`Erro ao processar PDF: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const canAnalyze = selectedFile && selectedOrganization && prompt.trim() && !isAnalyzing;
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <Header />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {selectedOrganization && (
+          <>
+            <OrganizationCards />
+            
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+              <FileUpload 
+                onFileSelect={setSelectedFile} 
+                selectedFile={selectedFile} 
+              />
+              
+              <div className="xl:col-span-1">
+                <PromptEditor 
+                  prompt={prompt} 
+                  onPromptChange={setPrompt} 
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-center items-center mb-8 gap-4">
+              <button
+                onClick={handleAnalyze}
+                disabled={!canAnalyze}
+                className={`w-full sm:w-auto px-8 py-3 rounded-lg font-medium flex items-center justify-center space-x-3 transition-all duration-200 ${
+                  canAnalyze
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
+                    : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Extraindo Texto do PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Brain className="h-5 w-5" />
+                    <span>Processar PDF</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {analysisResult && <FeedbackDisplay result={analysisResult} />}
+          </>
+        )}
+      </main>
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  );
+}
+
+export default App;
