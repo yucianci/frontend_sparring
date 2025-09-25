@@ -1,93 +1,57 @@
 import { AnalysisResult } from '../types';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/build/pdf';
+import type { TextItem } from 'pdfjs-dist/types/src/display/api';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?url';
 
-// Função para extrair texto do PDF usando pdf-parse
+GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
+// Função para extrair texto do PDF usando pdfjs-dist (compatível com o browser)
 async function extractTextFromPdf(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = async (event) => {
-      try {
-        const arrayBuffer = event.target?.result as ArrayBuffer;
-        
-        // Configura o worker do PDF.js para funcionar no browser
-        if (typeof window !== 'undefined') {
-          // @ts-ignore
-          window.pdfjsLib = window.pdfjsLib || {};
-          // @ts-ignore
-          window.pdfjsLib.GlobalWorkerOptions = window.pdfjsLib.GlobalWorkerOptions || {};
-          // @ts-ignore
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
-        
-        // Importa pdf-parse dinamicamente para uso no browser
-        const pdfParse = await import('pdf-parse/lib/pdf-parse.js');
-        
-        const data = await pdfParse.default(arrayBuffer);
-        
-        if (!data.text || data.text.trim() === '') {
-          reject(new Error('Nenhum texto pôde ser extraído do PDF. Verifique o arquivo.'));
-          return;
-        }
-        
-        console.log('=== INFORMAÇÕES DO ARQUIVO PDF ===');
-        console.log('Nome do arquivo:', file.name);
-        console.log('Tamanho do arquivo:', (file.size / 1024).toFixed(2), 'KB');
-        console.log('Número de páginas:', data.numpages);
-        console.log('');
-        console.log('=== TEXTO COMPLETO EXTRAÍDO DO PDF ===');
-        console.log(data.text);
-        console.log('');
-        console.log('=== ESTATÍSTICAS ===');
-        console.log('Total de caracteres extraídos:', data.text.length);
-        console.log('Total de linhas:', data.text.split('\n').length);
-        console.log('=== FIM DA EXTRAÇÃO ===');
-        
-        // Tentar fazer parse do JSON se o texto parecer ser JSON
-        try {
-          const jsonData = JSON.parse(data.text.trim());
-          console.log('');
-          console.log('=== DADOS ESTRUTURADOS ENCONTRADOS ===');
-          console.log('Empresa:', jsonData.company);
-          console.log('Número do voo:', jsonData.flightNumber);
-          console.log('Aeronave:', jsonData.aircraft);
-          console.log('Piloto:', jsonData.pilot);
-          console.log('Copiloto:', jsonData.copilot);
-          console.log('Rota:', jsonData.flightDetails?.route);
-          console.log('Data:', jsonData.flightDetails?.date);
-          console.log('Duração:', jsonData.flightDetails?.duration);
-          console.log('Clima:', jsonData.flightDetails?.weather);
-          console.log('Total de mensagens no transcript:', jsonData.transcript?.length || 0);
-          console.log('');
-          console.log('=== TRANSCRIPT COMPLETO ===');
-          if (jsonData.transcript && Array.isArray(jsonData.transcript)) {
-            jsonData.transcript.forEach((entry: any, index: number) => {
-              console.log(`${index + 1}. [${entry.timestamp}] ${entry.speaker}: ${entry.message}`);
-            });
-          }
-          console.log('=== FIM DO TRANSCRIPT ===');
-        } catch (parseError) {
-          console.log('');
-          console.log('=== AVISO ===');
-          console.log('O texto extraído não está em formato JSON válido.');
-          console.log('Texto será processado como texto simples.');
-        }
-        
-        resolve(data.text);
-      } catch (error) {
-        console.error('Erro ao extrair texto do PDF:', error);
-        reject(error);
-      }
-    };
-    
-    reader.onerror = () => reject(new Error('Erro ao ler o arquivo PDF'));
-    reader.readAsArrayBuffer(file);
-  });
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = getDocument({ data: arrayBuffer });
+  const pdfDocument = await loadingTask.promise;
+
+  let extractedText = '';
+
+  console.log('=== INFORMAÇÕES DO ARQUIVO PDF ===');
+  console.log('Nome do arquivo:', file.name);
+  console.log('Tamanho do arquivo:', (file.size / 1024).toFixed(2), 'KB');
+  console.log('Número de páginas:', pdfDocument.numPages);
+  console.log('');
+
+  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+    const page = await pdfDocument.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const pageText = content.items
+      .filter((item): item is TextItem => 'str' in item)
+      .map((item) => item.str)
+      .join(' ');
+
+    extractedText += `${pageText}\n`;
+
+    console.log(`--- Página ${pageNumber} ---`);
+    console.log(pageText);
+    console.log('');
+  }
+
+  const trimmedText = extractedText.trim();
+
+  if (!trimmedText) {
+    throw new Error('Nenhum texto pôde ser extraído do PDF. Verifique o arquivo.');
+  }
+
+  console.log('=== ESTATÍSTICAS ===');
+  console.log('Total de caracteres extraídos:', trimmedText.length);
+  console.log('Total de linhas:', trimmedText.split('\n').length);
+  console.log('=== FIM DA EXTRAÇÃO ===');
+
+  return trimmedText;
 }
 
 // Função para processar PDF e retornar resultado baseado nos dados extraídos
 export async function analyzePdfWithExtraction(
-  file: File, 
-  prompt: string, 
+  file: File,
+  prompt: string,
   organizationId: string
 ): Promise<AnalysisResult> {
   try {
@@ -95,12 +59,12 @@ export async function analyzePdfWithExtraction(
     
     // 1. Extrair texto do PDF e mostrar no console
     const extractedText = await extractTextFromPdf(file);
-    
+
     console.log('');
     console.log('=== PROMPT PARA ANÁLISE ===');
     console.log(prompt);
     console.log('=== FIM DO PROMPT ===');
-    
+
     // 2. Gerar resultado baseado nos dados extraídos
     const transcriptId = `TRANSCRIPT_${Date.now()}`;
     let pilotId = `PILOT_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
